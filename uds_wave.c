@@ -64,3 +64,31 @@ DEFINE_SOURCE(uds0, c, t, dS, eqn)
     dS[eqn] = 0.;
     return - rho0 * C_UDSI(c, t, ZETA);
 }
+
+// boundary condition rho, \nabla \cdot V
+DEFINE_PROFILE(myprof0, t, i) 
+{
+    face_t f;
+    real freq = 2.0e+4, rho = 998.2, c = 1483.0;
+    real omega = 2.0 * M_PI * freq;
+    real A = 40e-6;
+    real time = CURRENT_TIME;
+    begin_f_loop(f, t) 
+    {
+	F_PROFILE(f, t, i) = A*omega*rho/c * (cos(omega*time) - 1.0);    
+    }
+    end_f_loop(f, t)
+}
+	   
+DEFINE_PROFILE(myprof1, t, i)
+{
+    face_t f;
+    real freq = 2.0e+4, rho = 998.2, c = 1483.0;
+    real omega = 2.0 * M_PI * freq;
+    real A = 40e-6;
+    begin_f_loop(f, t)
+    {
+	F_PROFILE(f, t) = M_PI*pow(5e-3, 2)*A*omega * sin(omega*time);
+    }
+    end_f_loop(f, t)
+}
