@@ -25,7 +25,7 @@ DEFINE_UDS_UNSTEADY(uds_time, c, t, i, apu, su)
 
 DEFINE_UDS_FLUX(uds_flux, f, t, i)
 {
-    real k = 1483.0*1483.0, source;
+    real k = 1483.0*1483.0, source, Gsource;
     cell_t c0, c1;
     Thread *t1, *t0;
     real A[ND_ND], dRHO[ND_ND], dr0[ND_ND], dr1[ND_ND], es[ND_ND], A_by_es, ds;
@@ -35,11 +35,13 @@ DEFINE_UDS_FLUX(uds_flux, f, t, i)
 
     if (BOUNDARY_FACE_THREAD_P(t))
     {
-        if(NULL != THREAD_STORAGE(t, SV_UDS_I(RHO)) && NULL != T_STORAGE_R_NV(t0, SV_UDSI_G(RHO))) 
-	{
-            BOUNDARY_FACE_GEOMETRY(f, t, A, ds, es, A_by_es, dr0);
-            BOUNDARY_SECONDARY_GRADIENT_SOURCE(source, SV_UDSI_G(RHO), dRHO, es, A_by_es, k);
-            source += k * (F_UDSI(f, t, RHO) - C_UDSI(c0, t0, RHO)) * A_by_es / ds;
+	if(NULL != THREAD_STORAGE(t, SV_UDS_I(RHO)) {
+	    BOUNDARY_FACE_GEOMETRY(f, t, A, ds, es, A_by_es, dr0);
+	    source = k * (F_UDSI(f, t, RHO) - C_UDSI(c0, t0, RHO)) * A_by_es / ds;
+            if(NULL != T_STORAGE_R_NV(t0, SV_UDSI_G(RHO))) {
+                BOUNDARY_SECONDARY_GRADIENT_SOURCE(Gsource, SV_UDSI_G(RHO), dRHO, es, A_by_es, k);
+                source += Gsource;
+	    }
         } else {
             source = 0.;
         }
@@ -47,8 +49,11 @@ DEFINE_UDS_FLUX(uds_flux, f, t, i)
         c1 = F_C1(f, t);
         t1 = THREAD_T1(t);
         INTERIOR_FACE_GEOMETRY(f, t, A, ds, es, A_by_es, dr0, dr1);
-        SECONDARY_GRADIENT_SOURCE(source, SV_UDSI_G(RHO), dRHO, es, A_by_es, k);
-        source += k * (C_UDSI(c1, t1, RHO) - C_UDSI(c0, t0, RHO)) * A_by_es / ds;
+        source = k * (C_UDSI(c1, t1, RHO) - C_UDSI(c0, t0, RHO)) * A_by_es / ds;
+	if(NULL != T_STORAGE_R_NV(t0, SV_UDSI_G(RHO))) {
+	    SECONDARY_GRADIENT_SOURCE(Gsource, SV_UDSI_G(RHO), dRHO, es, A_by_es, k);
+	    source += Gsource;
+	}
     }
     return source;
 }
