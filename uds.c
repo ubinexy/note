@@ -9,59 +9,54 @@ enum {
     PHI,
     PSI,
     N_REQUIRED_UDS
-}
+};
 
-DEFINE_UNSTEADY(time_rho, c, t, i, dS, eqn)
+DEFINE_UDS_UNSTEADY(time_rho, c, t, i, apu, su)
 {
     real physical_dt, vol, rho0 = 998.2;
     vol = C_VOLUME(c, t);
     physical_dt = RP_Get_Real("physical-time-step");
     if(i == RHO) {
-        dS[eqn] = 0.0;
         *apu = - rho0 * vol / physical_dt;
-        *su = rho * vol * C_STORAGE_R(c, t, SV_UDSI_M1(i))/ physical_dt;
+        *su = rho0 * vol * C_STORAGE_R(c, t, SV_UDSI_M1(i))/ physical_dt;
     }
 }
 
-DEFINE_UNSTEADY(time_zeta, c, t, dS, eqn)
+DEFINE_UDS_UNSTEADY(time_zeta, c, t, i, apu, su)
 {
     real physical_dt, vol, rho0 = 998.2;
     vol = C_VOLUME(c, t);
     physical_dt = RP_Get_Real("physcial-time-step");
 
     if( i == ZETA ) {
-        dS[eqn] = 0.0;
-        *apu = -rho * vol / physical_dt;
-        *su = rho * vol * C_STORAGE_R(c, t, SV_UDSI_M1(i))/ physical_dt;
+        *apu = -rho0 * vol / physical_dt;
+        *su = rho0 * vol * C_STORAGE_R(c, t, SV_UDSI_M1(i))/ physical_dt;
     }
 }
 
-DEFINE_UNSTEADY(time_omega, c, t, dS, eqn)
+DEFINE_UDS_UNSTEADY(time_omega, c, t, i, apu, su)
 {
     real physical_dt, vol, rho0 = 998.2;
     vol = C_VOLUME(c, t);
     physical_dt = RP_Get_Real("physcial-time-step");
     
     if( i == OMEGA ) {
-         dS[eqn] = 0.0;
-         *apu = - rho * vol / physical_dt; 
-         *su = rho * vol *C_STORAGE_R(c, t, SV_UDSI_M1(i))/ physical_dt;
+         *apu = - rho0 * vol / physical_dt; 
+         *su = rho0 * vol *C_STORAGE_R(c, t, SV_UDSI_M1(i))/ physical_dt;
     }
 }
 
-DEFINE_UNSTEADY(time_phi, c, t, dS, eqn)
+DEFINE_UDS_UNSTEADY(time_phi, c, t, i, apu, su)
 {
     if( i == PHI ) {
-        dS[eqn] = 0.0;
         *apu = 0.0;
         *su = 0.0;
     }
 }
 
-DEFINE_UNSTEADY(time_psi, c, t, dS, eqn)
+DEFINE_USD_UNSTEADY(time_psi, c, t, i, apu, su)
 {
     if( i == PSI ) {
-        dS[eqn] = 0.0;
         *apu = 0.0;
         *su = 0.0;
     }  
@@ -73,8 +68,8 @@ DEFINE_FLUX(flux_zeta, f, t, i)
 {
     real k = 1483.0*1483.0;
     cell_t c0, c1;
-    THREAD *t1, *t0;
-    real A[ND_ND], dRHO[ND_ND], dr0[ND_ND], dr1[ND_ND], es[ND_ND], A_by_ds, ds;
+    Thread *t1, *t0;
+    real A[ND_ND], dRHO[ND_ND], dr0[ND_ND], dr1[ND_ND], es[ND_ND], A_by_es, ds, source;
     c0 = F_C0(f, t);
     t0 = THREAD_T0(t);
 
@@ -85,7 +80,7 @@ DEFINE_FLUX(flux_zeta, f, t, i)
         if(NULL != THREAD_STORAGE(t, SV_UDS_I(RHO)) ) {
             BOUNDARY_FACE_GEOMETRY(f, t, A, ds, es, A_by_es, dr0);
             source = k * (F_UDSI(f, t, RHO) - C_UDSI(c0, t0, RHO)) * A_by_es / ds;
-            if( NULL != T_STORAGE_R_NV(t0, SV_UDSI_G(RHO)) {
+            if( NULL != T_STORAGE_R_NV(t0, SV_UDSI_G(RHO)) ) {
                 BOUNDARY_SECONDARY_GRADIENT_SOURCE(GSource, SV_UDSI_G(RHO), dRHO, es, A_by_es, k);
                 source += GSource;
             }
@@ -93,9 +88,9 @@ DEFINE_FLUX(flux_zeta, f, t, i)
             source = 0.;
         }
         // \nabla \cdot (bar{v} zeta)   
-        if(NULL != THREAD_STORAGE(t, SV_UDS_I(ZETA))
+        if(NULL != THREAD_STORAGE(t, SV_UDS_I(ZETA)) {
             zeta =F_UDSI(f, t, ZETA);
-        } else if(NULL != T_STORAGE_R_NV(t0, SV_UDSI_G(ZETA)) {
+        } else if(NULL != T_STORAGE_R_NV(t0, SV_UDSI_G(ZETA))) {
             BOUNDARY_FACE_GEOMETRY(f, t, A, ds, es, A_by_es, dr0);
             zeta =C_UDSI(c0, t0, ZETA) + NV_DOT(C_UDSI_G(c0, t0, ZETA), dr0);
         } else {
@@ -109,12 +104,12 @@ DEFINE_FLUX(flux_zeta, f, t, i)
         // \nabla \cdot (c^2 \nabla p)
         INTERIOR_FACE_GEOMETRY(f, t, A, ds, es, A_by_es, dr0, dr1);
         source = k * (C_UDSI(c1, t1, rho) - C_UDSI(c0, t0, rho)) * A_by_es / ds;
-        if( NULL != T_STORAGE_R_NV(t0, SV_UDSI_G(RHO)) {
+        if( NULL != T_STORAGE_R_NV(t0, SV_UDSI_G(RHO)) ) {
             SECONDARY_GRADIENT_SOURCE(GSource, SV_UDSI_G(RHO), dRHO, es, A_by_es, k);
             source += GSource;
         }
         // \nabla \cdot (bar{v} zeta)  
-        if(NULL != T_STORAGE_R_NV(t0, SV_UDSI_G(ZETA)) {
+        if(NULL != T_STORAGE_R_NV(t0, SV_UDSI_G(ZETA)) ) {
             //INTERIOR_FACE_GEOMETRY(f, t, A, ds, es, A_by_es, dr0, dr1);
             ZETA = C_UDSI(c0, t0, ZETA) + NV_DOT(C_UDSI_G(c0, t0, ZETA), dr0);
         } else {
@@ -127,20 +122,24 @@ DEFINE_FLUX(flux_zeta, f, t, i)
 }
 
 DEFINE_FLUX(flux_omega, f, t, i)
-{
+{   
+    cell_t c0, c1;
+    Thread *t0, *t1;
+    real A[ND_ND], dRHO[ND_ND], dr0[ND_ND], dr1[ND_ND], es[ND_ND], A_by_es, ds, source;
+
     c0 = F_C0(f, t);
     t0 = THREAD_T0(t);
-
+    
     if (i != OMEGA) return 0.;
 
     if (BOUNDARY_FACE_THREAD_P(t)) {
         if(NULL != THREAD_STORAGE(t, SV_UDS_I(OMEGA)) ) {
-            omega = F_UDSI(f, t);
+            omega = F_UDSI(f, t, OMEGA);
         } else if ( NULL != T_STORAGE_R_NV(t0, SV_UDSI_G(OMEGA) ) {
             BOUNDARY_FACE_GEOMETRY(f, t, A, ds, es, A_by_es, dr0);
-            omega = C_UDSI(c0, t0) + NV_DOT(C_UDSI_G(c0, t0, OMEGA), dr0);
+            omega = C_UDSI(c0, t0, OMEGA) + NV_DOT(C_UDSI_G(c0, t0, OMEGA), dr0);
         } else {
-            omega = C_UDSI(c0, t0);
+            omega = C_UDSI(c0, t0, OMEGA);
         }
         NV_D(V, =, F_U(f, t), F_V(f, t), 0, omega);
         NV_DS(VOMGA, =, C_UDMI(c, t, 1), C_UDMI(c, t, 2), 0, C_UDMI(c, t, 0));
@@ -148,7 +147,7 @@ DEFINE_FLUX(flux_omega, f, t, i)
     } else {
         c1 = F_C1(f, t);
         t1 = THREAD_T1(t);
-        if(NULL != T_STORAGE_R_NV(t0, SV_UDSI_G(OMEGA)) {
+        if(NULL != T_STORAGE_R_NV(t0, SV_UDSI_G(OMEGA)) ) {
             INTERIOR_FACE_GEOMETRY(f, t, A, ds, es, A_by_es, dr0, dr1);
             omega = C_UDSI(c0, t0, OMEGA) + NV_DOT(C_UDSI_G(c0, t0, OMEGA), dr0);
         } else {
@@ -164,6 +163,10 @@ DEFINE_FLUX(flux_omega, f, t, i)
 
 DEFINE_FLUX(flux_rho, f, t, i)
 {
+    cell_t c0, c1;
+    Thread *t0, *t1;
+    real A[ND_ND], dRHO[ND_ND], dr0[ND_ND], dr1[ND_ND], es[ND_ND], A_by_es, ds, source;
+
     c0 = F_C0(f, t);
     t0 = THREAD_T0(t);
 
@@ -183,7 +186,7 @@ DEFINE_FLUX(flux_rho, f, t, i)
     } else {
         c1 = F_C1(f, t);
         t1 = THREAD_T1(t);
-        if(NULL != T_STORAGE_R_NV(t0, SV_UDSI_G(RHO)) {
+        if(NULL != T_STORAGE_R_NV(t0, SV_UDSI_G(RHO))) {
             INTERIOR_FACE_GEOMETRY(f, t, A, ds, es, A_by_es, dr0, dr1);
             rho = C_UDSI(c0, t0, RHO) + NV_DOT(C_UDSI_G(c0, t0, RHO), dr0);
         } else {
